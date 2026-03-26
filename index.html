@@ -211,20 +211,20 @@
         <div class="sec">Parameters</div>
         <div style="display:flex;flex-direction:column;gap:10px">
           <div class="pr">
-            <div class="pl"><span>q &nbsp;(twist)</span><span class="v" id="qVal">3</span></div>
+            <div class="pl"><span>q &nbsp;(meridional winds)</span><span class="v" id="qVal">3</span></div>
             <input type="range" id="qSl" min="-10" max="10" step="1" value="3">
           </div>
           <div class="pr">
-            <div class="pl"><span>r &nbsp;(# strands)</span><span class="v" id="rVal">2</span></div>
+            <div class="pl"><span>r &nbsp;(strands = longitudinal winds)</span><span class="v" id="rVal">2</span></div>
             <input type="range" id="rSl" min="1" max="12" step="1" value="2">
           </div>
           <div class="num-row">
             <div class="num-field">
-              <label>q (any integer)</label>
+              <label>q (meridional, any int)</label>
               <input type="number" id="qNum" value="3" step="1">
             </div>
             <div class="num-field">
-              <label>r (integer ≥ 1)</label>
+              <label>r (longitudinal, ≥ 1)</label>
               <input type="number" id="rNum" value="2" step="1" min="1">
             </div>
           </div>
@@ -270,6 +270,8 @@
           <div class="kv"><span>gcd(|q|, r)</span><span id="iGcd">1</span></div>
           <div class="kv"><span>Components</span><span id="iComp">1</span></div>
           <div class="kv"><span>Type</span><span id="iType">Knot</span></div>
+          <div class="kv"><span>Long. winds (r)</span><span id="iLong">2</span></div>
+          <div class="kv"><span>Merid. winds (|q|)</span><span id="iMerid">3</span></div>
           <div class="kv"><span>Min crossings</span><span id="iCross">2</span></div>
         </div>
       </div>
@@ -364,11 +366,19 @@ function strandCylPoints(k,q,r){
   return pts;
 }
 function strandTorPoints(k,q,r){
+  // Cylinder → torus mapping:
+  //   z (height, bottom→top) = LONGITUDE direction  → phi = 2π·t
+  //   angular position on cylinder = MERIDIAN direction → theta = 2π(k + q·t)/r
+  //
+  // Each strand contributes 1 longitudinal wind (phi: 0→2π)
+  // and q/r meridional sweep (theta sweeps 2πq/r).
+  // r strands total → r longitudinal winds, q meridional winds.
+  // This is Murasugi K(q,r): q = meridional, r = longitudinal = # strands.
   const pts=[];
   for(let i=0;i<=NPTS;i++){
     const t=i/NPTS;
-    const phi=2*Math.PI*(k/r + q*t/r);
-    const theta=2*Math.PI*t;
+    const phi  = 2*Math.PI*t;                     // longitude: height direction, 1 wind per strand
+    const theta= 2*Math.PI*(k + q*t)/r;           // meridian:  angular sweep, q/r winds per strand
     pts.push(new THREE.Vector3(
       (TOR_R+TOR_r*Math.cos(theta))*Math.cos(phi),
       (TOR_R+TOR_r*Math.cos(theta))*Math.sin(phi),
@@ -463,13 +473,18 @@ function rebuildScene(){
       const dA=new THREE.Mesh(dg,mat()); dA.position.set(CYL_R*Math.cos(aA),CYL_R*Math.sin(aA),-CYL_H/2); cylGrp.add(dA);
       const dB=new THREE.Mesh(dg.clone(),mat()); dB.position.set(CYL_R*Math.cos(bA),CYL_R*Math.sin(bA),+CYL_H/2); cylGrp.add(dB);
       const td=new THREE.Mesh(new THREE.SphereGeometry(0.06,12,12),mat());
-      td.position.set((TOR_R+TOR_r)*Math.cos(aA),(TOR_R+TOR_r)*Math.sin(aA),0); torusGrp.add(td);
+      // Dot at start of strand k on torus: phi=0 (longitude start), theta=2πk/r (meridional offset)
+      const tTheta = 2*Math.PI*k/r;
+      td.position.set((TOR_R+TOR_r*Math.cos(tTheta)), 0, TOR_r*Math.sin(tTheta));
+      torusGrp.add(td);
     }
   }
 
   document.getElementById('iGcd').textContent=d;
   document.getElementById('iComp').textContent=d;
   document.getElementById('iType').textContent=d===1?'Knot':d+'-comp. link';
+  document.getElementById('iLong').textContent=r;
+  document.getElementById('iMerid').textContent=Math.abs(q);
   const cr=Math.abs(q)>0?Math.min(Math.abs(q)*(r-1),r*(Math.abs(q)-1)):0;
   document.getElementById('iCross').textContent=cr;
   rebuildSwatches(d);
