@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K(q,r) Torus Link — Murasugi</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&display=swap');
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+  /* ── DARK (default) ── */
+  :root {
+    --bg:#09090f; --surf:#0f0f18; --border:#1e1e30;
+    --acc:#7c6aff; --text:#dde0f0; --muted:#4a4a6a;
+    --surf-color:0x2a2a55; --wire-color:0x4444aa;
+    --ghost-fill:rgba(42,42,85,0.35);
+  }
+  /* ── LIGHT ── */
+  body.light {
+    --bg:#f0f0f8; --surf:#ffffff; --border:#d0d0e8;
+    --acc:#5548cc; --text:#1a1a2e; --muted:#8888aa;
+  }
+
+  html,body { height:100%; background:var(--bg); color:var(--text);
+    font-family:'Space Mono',monospace; overflow:hidden; transition:background .25s,color .25s; }
+  #app { display:grid; grid-template-columns:250px 1fr; grid-template-rows:auto 1fr; height:100vh; }
+
+  header { grid-column:1/-1; padding:11px 20px; border-bottom:1px solid var(--border);
+    background:var(--surf); display:flex; align-items:baseline; gap:14px; transition:background .25s; }
+  header h1 { font-family:'Cormorant Garamond',serif; font-size:1.35rem; font-weight:300; color:var(--text); }
+  .sub { font-size:0.57rem; color:var(--muted); letter-spacing:0.14em; text-transform:uppercase; }
+  .header-right { margin-left:auto; display:flex; align-items:center; gap:12px; }
+  .hint { font-size:0.54rem; color:var(--muted); }
+
+  /* theme toggle */
+  .theme-btn {
+    width:36px; height:20px; border-radius:10px; border:1px solid var(--border);
+    background:var(--border); cursor:pointer; position:relative; transition:background .25s;
+    flex-shrink:0;
+  }
+  .theme-btn::after {
+    content:''; position:absolute; top:2px; left:2px;
+    width:14px; height:14px; border-radius:50%;
+    background:var(--acc); transition:transform .22s;
+  }
+  body.light .theme-btn::after { transform:translateX(16px); }
+  .theme-icon { font-size:0.7rem; color:var(--muted); user-select:none; }
+
+  aside { background:var(--surf); border-right:1px solid var(--border);
+    padding:15px 13px; display:flex; flex-direction:column; gap:15px;
+    overflow-y:auto; transition:background .25s; }
+  .sec { font-size:0.49rem; letter-spacing:0.22em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:7px; }
+  .div { height:1px; background:var(--border); }
+
+  .pr { display:flex; flex-direction:column; gap:5px; }
+  .pl { display:flex; justify-content:space-between; font-size:0.67rem; color:var(--text); }
+  .pl .v { color:var(--acc); font-weight:700; font-size:0.8rem; }
+  input[type=range] { -webkit-appearance:none; width:100%; height:2px;
+    background:var(--border); outline:none; border-radius:2px; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; height:13px;
+    border-radius:50%; background:var(--acc); cursor:pointer; box-shadow:0 0 6px var(--acc); }
+
+  .vg { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+  .vb { padding:7px 4px; font-family:'Space Mono',monospace; font-size:0.54rem;
+    letter-spacing:0.06em; text-transform:uppercase; background:transparent;
+    border:1px solid var(--border); color:var(--muted); cursor:pointer;
+    transition:all .17s; border-radius:2px; }
+  .vb.on { border-color:var(--acc); color:var(--acc); background:rgba(124,106,255,.09); }
+  body.light .vb.on { background:rgba(85,72,204,.09); }
+  .vb:hover:not(.on) { border-color:var(--muted); color:var(--text); }
+
+  .cg { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+  .cs { display:flex; flex-direction:column; gap:3px; font-size:0.51rem;
+    color:var(--muted); align-items:center; }
+  .cs input[type=color] { width:32px; height:23px; border:1px solid var(--border);
+    background:transparent; cursor:pointer; border-radius:2px; padding:1px; }
+
+  .chks { display:flex; flex-direction:column; gap:7px; }
+  .chk { display:flex; align-items:center; gap:7px; font-size:0.62rem;
+    color:var(--muted); cursor:pointer; }
+  .chk:hover { color:var(--text); }
+  .chk input { accent-color:var(--acc); }
+
+  .ib { background:rgba(124,106,255,.05); border:1px solid rgba(124,106,255,.17);
+    border-radius:3px; padding:9px; font-size:0.59rem; line-height:1.95; }
+  body.light .ib { background:rgba(85,72,204,.05); border-color:rgba(85,72,204,.2); }
+  .kv { display:flex; justify-content:space-between; color:var(--muted); }
+  .kv span:last-child { color:var(--text); font-weight:700; }
+
+  .sr { display:flex; align-items:center; gap:8px; }
+  .pb { flex-shrink:0; width:26px; height:26px; border-radius:50%;
+    border:1px solid var(--border); background:transparent; color:var(--text);
+    cursor:pointer; font-size:0.73rem; display:flex; align-items:center;
+    justify-content:center; transition:all .17s; }
+  .pb:hover { border-color:var(--acc); color:var(--acc); }
+  .sv2 { font-size:0.57rem; color:var(--muted); width:28px; text-align:right; }
+
+  main { position:relative; overflow:hidden; }
+  canvas { display:block; width:100%!important; height:100%!important; }
+  .vl { position:absolute; top:13px; left:15px; font-size:0.54rem; letter-spacing:0.15em;
+    text-transform:uppercase; color:var(--muted); background:rgba(9,9,15,.82);
+    padding:3px 8px; border-radius:2px; pointer-events:none; transition:background .25s; }
+  body.light .vl { background:rgba(240,240,248,.85); }
+  .dh { position:absolute; bottom:13px; right:15px; font-size:0.51rem;
+    color:var(--muted); pointer-events:none; opacity:0.5; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>K(q, r) Torus Link</h1>
+    <span class="sub">Murasugi Construction</span>
+    <div class="header-right">
+      <span class="hint">drag · scroll · shift+drag pan</span>
+      <span class="theme-icon" id="themeIcon">🌙</span>
+      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle light/dark"></button>
+    </div>
+  </header>
+
+  <aside>
+    <div>
+      <div class="sec">Parameters</div>
+      <div style="display:flex;flex-direction:column;gap:11px">
+        <div class="pr">
+          <div class="pl"><span>q &nbsp;(twist)</span><span class="v" id="qVal">3</span></div>
+          <input type="range" id="qSl" min="-10" max="10" step="1" value="3">
+        </div>
+        <div class="pr">
+          <div class="pl"><span>r &nbsp;(# strands)</span><span class="v" id="rVal">2</span></div>
+          <input type="range" id="rSl" min="1" max="12" step="1" value="2">
+        </div>
+      </div>
+    </div>
+    <div class="div"></div>
+    <div>
+      <div class="sec">View</div>
+      <div class="vg">
+        <button class="vb" id="vBoth"  onclick="setView('both')">Both</button>
+        <button class="vb on" id="vTorus" onclick="setView('torus')">Torus</button>
+        <button class="vb" id="vCyl"   onclick="setView('cyl')">Cylinder</button>
+        <button class="vb" id="vLink"  onclick="setView('link')">Link only</button>
+      </div>
+    </div>
+    <div class="div"></div>
+    <div>
+      <div class="sec">Component Colors</div>
+      <div class="cg" id="colorGrid"></div>
+    </div>
+    <div class="div"></div>
+    <div>
+      <div class="sec">Display</div>
+      <div class="chks">
+        <label class="chk"><input type="checkbox" id="chkTube" checked> Tube rendering</label>
+        <label class="chk"><input type="checkbox" id="chkGhost" checked> Ghost surface</label>
+        <label class="chk"><input type="checkbox" id="chkDots" checked> Show A/B points</label>
+      </div>
+    </div>
+    <div class="div"></div>
+    <div>
+      <div class="sec">Animation</div>
+      <div class="sr">
+        <button class="pb" id="playBtn" onclick="togglePlay()">⏸</button>
+        <input type="range" id="speedSl" min="0" max="3" step="0.1" value="0.5" style="flex:1">
+        <span class="sv2" id="spVal">0.5×</span>
+      </div>
+    </div>
+    <div class="div"></div>
+    <div>
+      <div class="sec">Info</div>
+      <div class="ib">
+        <div class="kv"><span>gcd(|q|, r)</span><span id="iGcd">1</span></div>
+        <div class="kv"><span>Components</span><span id="iComp">1</span></div>
+        <div class="kv"><span>Type</span><span id="iType">Knot</span></div>
+        <div class="kv"><span>Min crossings</span><span id="iCross">2</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main id="wrap">
+    <div class="vl" id="vlabel">TORUS VIEW</div>
+    <canvas id="c"></canvas>
+    <div class="dh">drag · scroll · shift+drag pan</div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─── theme ────────────────────────────────────────────────────
+let isLight = false;
+function toggleTheme() {
+  isLight = !isLight;
+  document.body.classList.toggle('light', isLight);
+  document.getElementById('themeIcon').textContent = isLight ? '☀️' : '🌙';
+  renderer.setClearColor(isLight ? 0xf0f0f8 : 0x09090f, 1);
+  rebuildScene(); applyView();
+}
+
+// ─── state ────────────────────────────────────────────────────
+let Q=3, R=2, view='torus', playing=true, speed=0.5;
+let useTube=true, useGhost=true, useDots=true;
+
+const PALETTE=['#ff6a7c','#7c6aff','#4dffb8','#ffd46a',
+               '#6ac8ff','#ff9e6a','#d46aff','#6affd4',
+               '#ff6ac8','#c8ff6a','#6a8fff','#ffb86a'];
+let compColors=[...PALETTE];
+
+// ─── three.js ─────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x09090f, 1);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(48, 1, 0.01, 200);
+camera.position.set(0, 0, 8);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const dL1 = new THREE.DirectionalLight(0xccccff, 1.0); dL1.position.set(5,8,6); scene.add(dL1);
+const dL2 = new THREE.DirectionalLight(0xffaa88, 0.5); dL2.position.set(-5,-4,-4); scene.add(dL2);
+const ptL = new THREE.PointLight(0x8877ff, 0.7, 50); ptL.position.set(0,4,4); scene.add(ptL);
+
+const torusGrp = new THREE.Group();
+const cylGrp   = new THREE.Group();
+scene.add(torusGrp);
+scene.add(cylGrp);
+
+// ─── constants ────────────────────────────────────────────────
+const CYL_R = 1.0;
+const CYL_H = 3.5;
+const TOR_R = 2.0;
+const TOR_r = 0.56;
+const NPTS  = 300;
+const TUBE_R = 0.055;
+
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a||1;}
+
+// ─── GEOMETRY ─────────────────────────────────────────────────
+// Helix on cylinder surface for strand k:
+//   angle φ(t) = 2π(k/r + q·t/r),   t ∈ [0,1]
+//   x = CYL_R·cos φ,  y = CYL_R·sin φ,  z = -H/2 + H·t
+// NOTE: cylinder axis is Z — CylinderGeometry will be rotated to match.
+function strandCylPoints(k,q,r){
+  const pts=[];
+  for(let i=0;i<=NPTS;i++){
+    const t=i/NPTS;
+    const phi=2*Math.PI*(k/r + q*t/r);
+    pts.push(new THREE.Vector3(
+      CYL_R*Math.cos(phi),
+      CYL_R*Math.sin(phi),
+      -CYL_H/2 + CYL_H*t      // Z is height axis
+    ));
+  }
+  return pts;
+}
+
+// Same strand mapped to torus:
+//   φ = longitude,  θ = 2π·t = meridian
+function strandTorPoints(k,q,r){
+  const pts=[];
+  for(let i=0;i<=NPTS;i++){
+    const t=i/NPTS;
+    const phi  =2*Math.PI*(k/r + q*t/r);
+    const theta=2*Math.PI*t;
+    pts.push(new THREE.Vector3(
+      (TOR_R+TOR_r*Math.cos(theta))*Math.cos(phi),
+      (TOR_R+TOR_r*Math.cos(theta))*Math.sin(phi),
+      TOR_r*Math.sin(theta)
+    ));
+  }
+  return pts;
+}
+
+// Build d closed torus components by chaining strands
+function buildTorComponents(q,r,d){
+  const steps=r/d;
+  const comps=[];
+  for(let c=0;c<d;c++){
+    const pts=[];
+    for(let s=0;s<steps;s++){
+      const k=((c+s*q)%r+r)%r;
+      const sp=strandTorPoints(k,q,r);
+      for(let j=0;j<sp.length-1;j++) pts.push(sp[j]);
+    }
+    pts.push(pts[0].clone());
+    comps.push(pts);
+  }
+  return comps;
+}
+
+// ─── mesh helpers ─────────────────────────────────────────────
+function makeTube(pts,rad,col,closed){
+  if(pts.length<4) return null;
+  const curve=new THREE.CatmullRomCurve3(pts,closed);
+  const geo=new THREE.TubeGeometry(curve,Math.min(pts.length,500),rad,10,closed);
+  const mat=new THREE.MeshPhongMaterial({color:col,emissive:col,emissiveIntensity:0.25,shininess:100});
+  return new THREE.Mesh(geo,mat);
+}
+function makeLine(pts,col){
+  const geo=new THREE.BufferGeometry().setFromPoints(pts);
+  return new THREE.Line(geo,new THREE.LineBasicMaterial({color:col,linewidth:2}));
+}
+
+function ghostSurfMat(opacity){
+  return new THREE.MeshPhongMaterial({
+    color: isLight ? 0x8888cc : 0x2a2a55,
+    emissive: isLight ? 0x4444aa : 0x111133,
+    transparent:true, opacity,
+    side:THREE.DoubleSide, depthWrite:false
+  });
+}
+function ghostWireMat(opacity){
+  return new THREE.MeshBasicMaterial({
+    color: isLight ? 0x6666cc : 0x4444bb,
+    wireframe:true, transparent:true, opacity
+  });
+}
+
+// ─── BUILD SCENE ──────────────────────────────────────────────
+// Tags on objects so we can find surfaces later
+const TAG_SURF = 'surf';
+const TAG_WIRE = 'wire';
+
+function tagMesh(m, tag){ m.userData.ghostTag=tag; return m; }
+
+function rebuildScene(){
+  while(torusGrp.children.length) torusGrp.remove(torusGrp.children[0]);
+  while(cylGrp.children.length)   cylGrp.remove(cylGrp.children[0]);
+
+  const q=Q, r=R, d=gcd(Math.abs(q),r);
+  const surfOp = useGhost ? (isLight?0.28:0.35) : 0;
+  const wireOp = useGhost ? (isLight?0.22:0.20) : 0;
+  const capOp  = useGhost ? (isLight?0.20:0.25) : 0;
+
+  // ── Torus surface ──
+  torusGrp.add(tagMesh(new THREE.Mesh(
+    new THREE.TorusGeometry(TOR_R,TOR_r,80,160),
+    ghostSurfMat(surfOp)
+  ), TAG_SURF));
+  torusGrp.add(tagMesh(new THREE.Mesh(
+    new THREE.TorusGeometry(TOR_R,TOR_r,16,48),
+    ghostWireMat(wireOp)
+  ), TAG_WIRE));
+
+  // ── Cylinder surface — rotated so its axis aligns with Z ──
+  // THREE.CylinderGeometry has axis along Y by default.
+  // We rotate it 90° around X so its axis points along Z.
+  function makeCylGeo(rSeg,hSeg,open){
+    const g=new THREE.CylinderGeometry(CYL_R,CYL_R,CYL_H,rSeg,hSeg,open);
+    g.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI/2));
+    return g;
+  }
+
+  cylGrp.add(tagMesh(new THREE.Mesh(makeCylGeo(64,1,true),  ghostSurfMat(surfOp)), TAG_SURF));
+  cylGrp.add(tagMesh(new THREE.Mesh(makeCylGeo(32,8,true),  ghostWireMat(wireOp)), TAG_WIRE));
+
+  // Caps (circles in XY plane, offset along Z)
+  const capMat1 = ghostSurfMat(capOp);
+  const capMat2 = ghostSurfMat(capOp);
+  const capGeo  = new THREE.CircleGeometry(CYL_R,64);
+  const capTop  = new THREE.Mesh(capGeo, capMat1);
+  capTop.position.z =  CYL_H/2;
+  const capBot  = new THREE.Mesh(capGeo.clone(), capMat2);
+  capBot.rotation.y = Math.PI;
+  capBot.position.z = -CYL_H/2;
+  cylGrp.add(tagMesh(capTop,TAG_SURF));
+  cylGrp.add(tagMesh(capBot,TAG_SURF));
+
+  // ── Torus link components ──
+  const torComps=buildTorComponents(q,r,d);
+  for(let c=0;c<d;c++){
+    const col=new THREE.Color(compColors[c%PALETTE.length]);
+    const m=useTube?makeTube(torComps[c],TUBE_R,col,true):makeLine(torComps[c],col);
+    if(m) torusGrp.add(m);
+  }
+
+  // ── Cylinder: exactly r strands (one per A_k → B'_k) ──
+  for(let k=0;k<r;k++){
+    const c=k%d;
+    const col=new THREE.Color(compColors[c%PALETTE.length]);
+    const pts=strandCylPoints(k,q,r);
+    const m=useTube?makeTube(pts,TUBE_R,col,false):makeLine(pts,col);
+    if(m) cylGrp.add(m);
+  }
+
+  // ── Dots: A_k (bottom) and B'_k (top) on cylinder, and on torus ──
+  if(useDots){
+    const dotR=0.07;
+    for(let k=0;k<r;k++){
+      const c=k%d;
+      const col=new THREE.Color(compColors[c%PALETTE.length]);
+      const mat=()=>new THREE.MeshPhongMaterial({color:col,emissive:col,emissiveIntensity:0.7});
+      const dg=new THREE.SphereGeometry(dotR,14,14);
+
+      // A_k — bottom of cylinder (z = -H/2)
+      const aAngle=2*Math.PI*k/r;
+      const dA=new THREE.Mesh(dg,mat());
+      dA.position.set(CYL_R*Math.cos(aAngle), CYL_R*Math.sin(aAngle), -CYL_H/2);
+      cylGrp.add(dA);
+
+      // B'_k — top of cylinder (z = +H/2), at twisted angle
+      const bAngle=2*Math.PI*(k+q)/r;
+      const dB=new THREE.Mesh(dg.clone(),mat());
+      dB.position.set(CYL_R*Math.cos(bAngle), CYL_R*Math.sin(bAngle), +CYL_H/2);
+      cylGrp.add(dB);
+
+      // Torus dot — outer equator at longitude aAngle
+      const td=new THREE.Mesh(new THREE.SphereGeometry(0.06,12,12),mat());
+      td.position.set((TOR_R+TOR_r)*Math.cos(aAngle),(TOR_R+TOR_r)*Math.sin(aAngle),0);
+      torusGrp.add(td);
+    }
+  }
+
+  // ── Info ──
+  document.getElementById('iGcd').textContent=d;
+  document.getElementById('iComp').textContent=d;
+  document.getElementById('iType').textContent=d===1?'Knot':d+'-comp. link';
+  const cr=Math.abs(q)>0?Math.min(Math.abs(q)*(r-1),r*(Math.abs(q)-1)):0;
+  document.getElementById('iCross').textContent=cr;
+  rebuildSwatches(d);
+}
+
+// ─── ghost opacity update ──────────────────────────────────────
+function updateGhostOpacity(){
+  const surfOp = useGhost?(isLight?0.28:0.35):0;
+  const wireOp = useGhost?(isLight?0.22:0.20):0;
+  [torusGrp,cylGrp].forEach(grp=>{
+    grp.children.forEach(ch=>{
+      if(!ch.material||!ch.userData.ghostTag) return;
+      ch.material.opacity = ch.userData.ghostTag===TAG_WIRE ? wireOp : surfOp;
+    });
+  });
+}
+
+// ─── color swatches ───────────────────────────────────────────
+function rebuildSwatches(d){
+  const g=document.getElementById('colorGrid');
+  g.innerHTML='';
+  for(let c=0;c<d;c++){
+    const sw=document.createElement('div'); sw.className='cs';
+    const lbl=document.createElement('span'); lbl.textContent='C'+(c+1);
+    const inp=document.createElement('input'); inp.type='color';
+    inp.value=compColors[c]||PALETTE[c%PALETTE.length];
+    inp.dataset.idx=c;
+    inp.addEventListener('input',e=>{
+      compColors[+e.target.dataset.idx]=e.target.value;
+      rebuildScene(); applyView();
+    });
+    sw.appendChild(lbl); sw.appendChild(inp); g.appendChild(sw);
+  }
+}
+
+// ─── view ─────────────────────────────────────────────────────
+const VL={both:'TORUS + CYLINDER',torus:'TORUS VIEW',cyl:'CYLINDER VIEW',link:'LINK ONLY'};
+
+function setView(v){
+  view=v;
+  document.getElementById('vlabel').textContent=VL[v];
+  ['vBoth','vTorus','vCyl','vLink'].forEach(id=>document.getElementById(id).classList.remove('on'));
+  document.getElementById({both:'vBoth',torus:'vTorus',cyl:'vCyl',link:'vLink'}[v]).classList.add('on');
+  applyView();
+}
+
+function applyView(){
+  updateGhostOpacity();
+  // hide surface in link-only mode
+  if(view==='link'){
+    torusGrp.children.forEach(ch=>{
+      if(ch.userData.ghostTag) ch.material.opacity=0;
+    });
+  }
+  if(view==='both'){
+    torusGrp.visible=true; cylGrp.visible=true;
+    torusGrp.position.set(-3.1,0,0); torusGrp.scale.setScalar(0.65);
+    cylGrp.position.set(2.7,0,0);    cylGrp.scale.setScalar(0.65);
+  } else if(view==='torus'||view==='link'){
+    torusGrp.visible=true; cylGrp.visible=false;
+    torusGrp.position.set(0,0,0); torusGrp.scale.setScalar(1);
+  } else {
+    torusGrp.visible=false; cylGrp.visible=true;
+    cylGrp.position.set(0,0,0); cylGrp.scale.setScalar(1);
+  }
+}
+
+// ─── orbit ────────────────────────────────────────────────────
+let isDrag=false,isShift=false,lx=0,ly=0;
+let rotX=0.28,rotY=0.45,panX=0,panY=0,zoom=8;
+
+canvas.addEventListener('mousedown',e=>{isDrag=true;isShift=e.shiftKey;lx=e.clientX;ly=e.clientY;});
+window.addEventListener('mouseup',()=>isDrag=false);
+window.addEventListener('mousemove',e=>{
+  if(!isDrag)return;
+  const dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;
+  if(isShift){panX+=dx*0.01;panY-=dy*0.01;}
+  else{rotY+=dx*0.008;rotX+=dy*0.008;rotX=Math.max(-1.4,Math.min(1.4,rotX));}
+});
+canvas.addEventListener('wheel',e=>{zoom+=e.deltaY*0.013;zoom=Math.max(2,Math.min(25,zoom));},{passive:true});
+
+// ─── controls ─────────────────────────────────────────────────
+document.getElementById('qSl').addEventListener('input',e=>{
+  Q=parseInt(e.target.value);document.getElementById('qVal').textContent=Q;
+  rebuildScene();applyView();
+});
+document.getElementById('rSl').addEventListener('input',e=>{
+  R=parseInt(e.target.value);document.getElementById('rVal').textContent=R;
+  rebuildScene();applyView();
+});
+document.getElementById('chkTube').addEventListener('change',e=>{useTube=e.target.checked;rebuildScene();applyView();});
+document.getElementById('chkGhost').addEventListener('change',e=>{useGhost=e.target.checked;updateGhostOpacity();});
+document.getElementById('chkDots').addEventListener('change',e=>{useDots=e.target.checked;rebuildScene();applyView();});
+document.getElementById('speedSl').addEventListener('input',e=>{
+  speed=parseFloat(e.target.value);
+  document.getElementById('spVal').textContent=speed.toFixed(1)+'×';
+});
+function togglePlay(){playing=!playing;document.getElementById('playBtn').textContent=playing?'⏸':'▶';}
+
+// ─── resize + render ──────────────────────────────────────────
+function resize(){
+  const w=document.getElementById('wrap').clientWidth;
+  const h=document.getElementById('wrap').clientHeight;
+  renderer.setSize(w,h,false);
+  camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize);
+resize();
+
+let t=0;
+function animate(){
+  requestAnimationFrame(animate);
+  if(playing) t+=0.003*speed;
+  const ry=rotY+(playing?t:0);
+  torusGrp.rotation.set(rotX,ry,0);
+  cylGrp.rotation.set(rotX,ry,0);
+  camera.position.set(panX,panY,zoom);
+  camera.lookAt(panX,panY,0);
+  ptL.intensity=0.55+0.18*Math.sin(t*1.4);
+  renderer.render(scene,camera);
+}
+
+// ─── init ─────────────────────────────────────────────────────
+rebuildScene();
+setView('torus');
+animate();
+</script>
+</body>
+</html>
